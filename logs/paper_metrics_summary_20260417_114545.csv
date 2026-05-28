@@ -1,0 +1,6 @@
+﻿"component","event","samples","avg_elapsed_ms","avg_bytes_in","avg_bytes_out","ok_rate_pct"
+"robot_a","run_session","4","45.829","87","160","100"
+"robot_b","step2","4","0.1","323","322","100"
+"server","register","8","0.115","83","64","100"
+"server","step1","4","0.096","394","323","100"
+"server","step3","4","0.055","322","287","100"

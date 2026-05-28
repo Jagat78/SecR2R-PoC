@@ -1,0 +1,60 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: secr2r_server
+    command: ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      - SERVICE_NAME=server
+      - LOG_DIR=/app/logs
+      - ALLOWED_SKEW_SECONDS=30
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    networks:
+      - secr2r-net
+
+  robot_a:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: secr2r_robot_a
+    command: ["uvicorn", "robot_a.app:app", "--host", "0.0.0.0", "--port", "8001"]
+    environment:
+      - SERVICE_NAME=robot_a
+      - LOG_DIR=/app/logs
+      - SERVER_URL=http://server:8000
+      - ROBOT_B_URL=http://robot_b:8002
+      - ROBOT_ID=R_A
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "8001:8001"
+    depends_on:
+      - server
+      - robot_b
+    networks:
+      - secr2r-net
+
+  robot_b:
+    build:
+      context: .
+      dockerfile: Containerfile
+    container_name: secr2r_robot_b
+    command: ["uvicorn", "robot_b.app:app", "--host", "0.0.0.0", "--port", "8002"]
+    environment:
+      - SERVICE_NAME=robot_b
+      - LOG_DIR=/app/logs
+      - ROBOT_ID=R_B
+    volumes:
+      - ./logs:/app/logs
+    ports:
+      - "8002:8002"
+    networks:
+      - secr2r-net
+
+networks:
+  secr2r-net:
+    name: secr2r-net

@@ -1,0 +1,6 @@
+component,event,elapsed_ms,bytes_in,bytes_out,ok
+robot_a,run_session,55.049,87,160,1
+robot_a,run_session,43.424,87,160,1
+robot_a,run_session,39.054,87,160,1
+robot_a,run_session,45.791,87,160,1
+robot_a,run_session,95.629,87,160,1

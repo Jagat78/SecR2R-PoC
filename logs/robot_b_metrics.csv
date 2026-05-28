@@ -1,0 +1,6 @@
+component,event,elapsed_ms,bytes_in,bytes_out,ok
+robot_b,step2,0.112,323,322,1
+robot_b,step2,0.082,323,322,1
+robot_b,step2,0.100,323,322,1
+robot_b,step2,0.107,323,322,1
+robot_b,step2,0.128,323,322,1
