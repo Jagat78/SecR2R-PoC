@@ -19,6 +19,26 @@ def health() -> dict[str, str]:
     return {"status": "ok", "service": "robot_b", "robot_id": ROBOT_ID}
 
 
+@app.post("/register")
+def register_robot(attributes: dict) -> dict:
+    """Robot Registration Phase (Step 0)"""
+    with measure() as elapsed:
+        # Simulate registration message to server
+        payload = {
+            "robot_id": ROBOT_ID,
+            "attributes": attributes
+        }
+        import httpx
+        with httpx.Client(timeout=10.0) as client:
+            r = client.post("http://localhost:8000/register", json=payload)
+            if r.status_code != 200:
+                raise HTTPException(status_code=r.status_code, detail=f"registration failed: {r.text}")
+            result = r.json()
+        metrics.log(MetricRecord(
+            component="robot_b", event="register", elapsed_ms=elapsed(), bytes_in=len(str(attributes)), bytes_out=64, ok=True))
+        return {"status": "ok", "server_response": result}
+
+
 @app.post("/step2", response_model=MB)
 def step2(msg: M1S) -> MB:
     raw_in = msg.model_dump_json()
@@ -49,14 +69,5 @@ def step2(msg: M1S) -> MB:
             t_b=t_b,
         )
 
-    metrics.log(
-        MetricRecord(
-            component="robot_b",
-            event="step2",
-            elapsed_ms=elapsed(),
-            bytes_in=len(raw_in),
-            bytes_out=len(out.model_dump_json()),
-            ok=True,
-        )
-    )
+    metrics.log(MetricRecord(component="robot_b", event="step2", elapsed_ms=elapsed(), bytes_in=len(raw_in), bytes_out=len(out.model_dump_json()), ok=True))
     return out

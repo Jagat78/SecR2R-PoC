@@ -1,10 +1,3 @@
-def h(*parts: str) -> str:
-def fresh_nonce(nbytes: int = 16) -> str:
-def now_ts() -> int:
-def fake_puf(attributes: Dict[str, str]) -> str:
-def gen(fp: str) -> tuple[str, str]:
-def rep(fp_star: str, helper: str) -> str:
-
 import hashlib
 import secrets
 from typing import Dict

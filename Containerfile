@@ -11,4 +11,3 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY . /app
 
 # Service command is set by podman-compose per container.
-CMD ["python", "-m", "http.server", "8000"]

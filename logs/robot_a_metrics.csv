@@ -4,3 +4,9 @@ robot_a,run_session,43.424,87,160,1
 robot_a,run_session,39.054,87,160,1
 robot_a,run_session,45.791,87,160,1
 robot_a,run_session,95.629,87,160,1
+robot_a,run_session,128.824,87,160,1
+robot_a,step1,0.251,0,376,1
+robot_a,step1_ack,67.972,307,0,1
+robot_a,step2_ack,93.911,306,0,1
+robot_a,step3_ack,123.984,275,0,1
+robot_a,step5,138.036,0,0,1

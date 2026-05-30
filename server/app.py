@@ -25,23 +25,15 @@ def health() -> dict[str, str]:
 
 @app.post("/register", response_model=RegisterResponse)
 def register(req: RegisterRequest) -> RegisterResponse:
+    """Registration Phase (Step 0)"""
     with measure() as elapsed:
         registry[req.robot_id] = {
             "bind": h(req.robot_id, json.dumps(req.attributes, sort_keys=True)),
             "status": "registered",
         }
-
     payload_out = len(req.model_dump_json())
-    metrics.log(
-        MetricRecord(
-            component="server",
-            event="register",
-            elapsed_ms=elapsed(),
-            bytes_in=payload_out,
-            bytes_out=64,
-            ok=True,
-        )
-    )
+    metrics.log(MetricRecord(
+        component="server", event="register", elapsed_ms=elapsed(), bytes_in=payload_out, bytes_out=64, ok=True))
     return RegisterResponse(robot_id=req.robot_id, status="registered")
 
 
@@ -55,7 +47,6 @@ def step1(msg: M1A) -> M1S:
         if abs(now_ts() - msg.t_a) > ALLOWED_SKEW_SECONDS:
             raise HTTPException(status_code=408, detail="stale timestamp in M1_a")
 
-        # Basic integrity check placeholder.
         expected_c5 = h(msg.session_id, msg.from_robot, msg.to_robot, msg.c1, str(msg.t_a))
         if expected_c5 != msg.c5:
             raise HTTPException(status_code=401, detail="invalid C5")
@@ -84,16 +75,7 @@ def step1(msg: M1A) -> M1S:
             to_robot=msg.to_robot,
         )
 
-    metrics.log(
-        MetricRecord(
-            component="server",
-            event="step1",
-            elapsed_ms=elapsed(),
-            bytes_in=len(raw_in),
-            bytes_out=len(out.model_dump_json()),
-            ok=True,
-        )
-    )
+    metrics.log(MetricRecord(component="server", event="step1", elapsed_ms=elapsed(), bytes_in=len(raw_in), bytes_out=len(out.model_dump_json()), ok=True))
     return out
 
 
