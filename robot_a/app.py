@@ -8,10 +8,11 @@ import uuid
 import logging
 import sys
 
+
 import httpx
 from fastapi import FastAPI, HTTPException
-
-from common.crypto_utils import fake_puf, gen, h, now_ts, rep
+import base64
+from common.crypto_utils import fake_puf, gen, h, now_ts, rep, generate_ecc_keypair, serialize_pubkey, deserialize_pubkey, ecc_point_mult
 from common.metrics import MetricLogger, MetricRecord, measure
 from common.models import M1A, M2S, MB, M1S, SessionRunRequest, SessionRunResponse
 
@@ -69,22 +70,26 @@ def run_session(req: SessionRunRequest) -> SessionRunResponse:
     """Robot-to-Robot Communication Phase (Step 1-5)"""
     logger.info("run_session: entered function")
 
-    # Step 1a: Initiate session to compute login message
+    # Step 1a: Initiate session to compute login message (ECC-based)
     with measure() as step1a_elapsed:
         session_id = str(uuid.uuid4())
+        # ECC key generation for this session
+        priv_a, pub_a = generate_ecc_keypair()
+        pub_a_bytes = serialize_pubkey(pub_a)
+        pub_a_b64 = base64.b64encode(pub_a_bytes).decode()
+        # For demo, keep other fields as before, but c1 now carries the ECC public key
         fp = fake_puf(req.attributes)
         helper, _secret = gen(fp)
         theta_star = rep(fp, helper)
-        c1 = h("c1", session_id, theta_star)
         c3 = h("c3", ROBOT_ID, req.target_robot, theta_star)
-        c4 = h("c4", req.target_robot, c1)
+        c4 = h("c4", req.target_robot, pub_a_b64)
         t_a = now_ts()
-        c5 = h(session_id, ROBOT_ID, req.target_robot, c1, str(t_a))
+        c5 = h(session_id, ROBOT_ID, req.target_robot, pub_a_b64, str(t_a))
         m1a = M1A(
             session_id=session_id,
             from_robot=ROBOT_ID,
             to_robot=req.target_robot,
-            c1=c1,
+            c1=pub_a_b64,  # ECC public key
             c3=c3,
             c4=c4,
             c5=c5,
@@ -108,7 +113,7 @@ def run_session(req: SessionRunRequest) -> SessionRunResponse:
         pass
     metrics.log(MetricRecord(component="robot_a", event="step2a", elapsed_ms=step2a_elapsed(), bytes_in=len(str(m1s)), bytes_out=0, ok=True))
 
-    # Step 2b: Send message to robot b
+    # Step 2b: Send message to robot b (ECC public key exchange)
     with measure() as step2b_elapsed:
         with httpx.Client(timeout=10.0) as client:
             r2 = client.post(f"{ROBOT_B_URL}/step2", json=m1s.model_dump())
@@ -116,6 +121,17 @@ def run_session(req: SessionRunRequest) -> SessionRunResponse:
         logger.error("run_session: step2b failed, returning early")
         raise HTTPException(status_code=r2.status_code, detail=f"step2 failed: {r2.text}")
     mb = MB(**r2.json())
+    # After receiving MB, extract Robot B's ECC public key and compute shared secret
+    pub_b_b64 = mb.w1
+    try:
+        pub_b_bytes = base64.b64decode(pub_b_b64)
+        pub_b = deserialize_pubkey(pub_b_bytes)
+        # priv_a must be available from Step 1a (move priv_a to a higher scope if needed)
+        shared_secret = ecc_point_mult(priv_a, pub_b)
+        # You can now derive a session key from shared_secret (e.g., using a KDF)
+    except Exception as e:
+        logger.error(f"Failed to process Robot B's ECC public key: {e}")
+        shared_secret = None
     metrics.log(MetricRecord(component="robot_a", event="step2b", elapsed_ms=step2b_elapsed(), bytes_in=0, bytes_out=len(str(mb)), ok=True))
 
     # Step 3a: robot b validates the message from server and computes reply message for the server
